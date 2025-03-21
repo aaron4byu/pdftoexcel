@@ -1,0 +1,41 @@
+import streamlit as st
+import pandas as pd
+import PyPDF2
+import re
+
+# Function to extract item numbers and descriptions from PDF
+def extract_items_from_pdf(pdf_file):
+    extracted_data = []
+    
+    # Read PDF
+    pdf_reader = PyPDF2.PdfReader(pdf_file)
+    for page in pdf_reader.pages:
+        text = page.extract_text()
+        
+        # Find item number and description patterns
+        matches = re.findall(r'([A-Z0-9]+)\s+([\d\"\'\sX\w-]+)', text)
+        
+        for match in matches:
+            item_number, description = match
+            extracted_data.append([item_number, description.strip()])
+    
+    return extracted_data
+
+# Streamlit UI
+st.title("PDF Item Extractor")
+
+uploaded_file = st.file_uploader("Upload a PDF file", type=["pdf"])
+
+if uploaded_file is not None:
+    extracted_data = extract_items_from_pdf(uploaded_file)
+    
+    if extracted_data:
+        df = pd.DataFrame(extracted_data, columns=["Item Number", "Description"])
+        st.write("### Extracted Items:")
+        st.dataframe(df)
+        
+        # Provide a download link for CSV
+        csv = df.to_csv(index=False).encode('utf-8')
+        st.download_button("Download as CSV", csv, "extracted_items.csv", "text/csv")
+    else:
+        st.warning("No items with both an item number and description found.")
